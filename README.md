@@ -2,7 +2,7 @@
 
 `ChatType` is a native macOS dictation app for people who already use ChatGPT through a local Codex desktop session and want the fastest possible `F5 -> speak -> paste` workflow.
 
-Public landing page: [longbiaochen.github.io/chattype](https://longbiaochen.github.io/chattype/)
+Public landing page: [longbiaochen.github.io/chat-type](https://longbiaochen.github.io/chat-type/)
 
 It is intentionally opinionated:
 
@@ -88,8 +88,8 @@ This repo does not yet publish a dedicated Homebrew tap, but the cask file is ke
 
 ### Release Download
 
-- Releases: [github.com/longbiaochen/chattype/releases](https://github.com/longbiaochen/chattype/releases)
-- Current release page: [v0.1.1](https://github.com/longbiaochen/chattype/releases/tag/v0.1.1)
+- Releases: [github.com/longbiaochen/chat-type/releases](https://github.com/longbiaochen/chat-type/releases)
+- Current release page: [v0.1.1](https://github.com/longbiaochen/chat-type/releases/tag/v0.1.1)
 
 ## Advanced Recovery Route
 
