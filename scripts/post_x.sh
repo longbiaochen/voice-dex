@@ -5,42 +5,27 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  scripts/post_x.sh [--app APP_NAME] [--print] "post text"
-  echo "post text" | scripts/post_x.sh [--app APP_NAME]
+  scripts/post_x.sh [--print] "post text"
+  echo "post text" | scripts/post_x.sh [--print]
 
 Options:
-  --app APP_NAME  Use a specific xurl app profile.
-  --print         Print the resolved xurl command without sending the post.
+  --print         Print the resolved chrome-use workflow without sending the post.
   -h, --help      Show this help message.
 
 Notes:
-  - Requires the official `xurl` CLI to be installed and authenticated.
+  - Uses chrome-use + Chrome for Testing, not xurl.
   - Reads post text from the first positional argument or stdin.
-  - Uses `XURL_APP` when `--app` is not provided.
+  - Uses the same managed browser session for publish and verification.
 EOF
 }
 
-require_cmd() {
-  if ! command -v "$1" >/dev/null 2>&1; then
-    echo "missing required command: $1" >&2
-    exit 1
-  fi
-}
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 
-app_name="${XURL_APP:-}"
 print_only=0
 text=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --app)
-      if [[ $# -lt 2 ]]; then
-        echo "--app requires a value" >&2
-        exit 1
-      fi
-      app_name="$2"
-      shift 2
-      ;;
     --print)
       print_only=1
       shift
@@ -84,20 +69,9 @@ if [[ -z "$text" ]]; then
   exit 1
 fi
 
-require_cmd xurl
-
-cmd=(xurl)
-if [[ -n "$app_name" ]]; then
-  cmd+=(--app "$app_name")
-fi
-cmd+=(post "$text")
-
+cmd=(node "$SCRIPT_DIR/post_x_via_chrome_use.mjs" --text "$text")
 if [[ "$print_only" -eq 1 ]]; then
-  printf 'Resolved command:\n'
-  printf '  '
-  printf '%q ' "${cmd[@]}"
-  printf '\n'
-  exit 0
+  cmd+=(--print)
 fi
 
 "${cmd[@]}"

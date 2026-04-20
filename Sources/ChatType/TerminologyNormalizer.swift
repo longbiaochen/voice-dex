@@ -35,9 +35,10 @@ struct TerminologyNormalizer: TranscriptNormalizing {
         importedEntries: [TerminologyEntry],
         hintTerms: [String]
     ) -> NormalizationResult {
-        let simplifiedText = simplifiedChineseText(from: text)
+        let artifactStrippedText = stripKnownTrailingArtifacts(from: text)
+        let simplifiedText = simplifiedChineseText(from: artifactStrippedText)
         var output = simplifiedText
-        var applied = simplifiedText != text
+        var applied = artifactStrippedText != text || simplifiedText != artifactStrippedText
 
         let exactPass = applyExactRules(
             to: output,
@@ -416,6 +417,29 @@ struct TerminologyNormalizer: TranscriptNormalizing {
         }
 
         return mutableText as String
+    }
+
+    private func stripKnownTrailingArtifacts(from text: String) -> String {
+        let patterns = [
+            #"\s*Ask Codex anything\. @ to use plugins or use files\s*$"#,
+        ]
+
+        var output = text
+        for pattern in patterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
+                continue
+            }
+
+            let fullRange = NSRange(output.startIndex..., in: output)
+            output = regex.stringByReplacingMatches(
+                in: output,
+                options: [],
+                range: fullRange,
+                withTemplate: ""
+            )
+        }
+
+        return output.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func normalizedTerms(from terms: [String]) -> [String] {

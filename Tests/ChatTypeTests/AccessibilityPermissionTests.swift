@@ -3,6 +3,27 @@ import Testing
 @testable import ChatType
 
 @Test
+func accessibilityRepairActionsPreferGuidedFlowAndKeepTypedSettingsFallback() {
+    let actions = AccessibilityPermission.repairActions()
+
+    #expect(actions.count == 3)
+    #expect(actions[0].title == "Guide Accessibility Access")
+    #expect(actions[0].kind == .guidedAccessibilityAccess)
+    #expect(actions[1].title == "Open Accessibility Settings")
+    #expect(
+        actions[1].kind == .openSettings(
+            PermissionSettingsDestination(
+                url: URL(string: "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Accessibility")!,
+                paneIdentifier: "com.apple.settings.PrivacySecurity.extension",
+                anchor: "Privacy_Accessibility"
+            )
+        )
+    )
+    #expect(actions[2].title == "Refresh Status")
+    #expect(actions[2].kind == .refreshStatus)
+}
+
+@Test
 func accessibilityRepairGuidanceFlagsAdHocBuilds() {
     let guidance = AccessibilityPermission.repairGuidance(
         appName: "ChatType",

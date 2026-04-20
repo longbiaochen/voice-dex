@@ -16,18 +16,20 @@ protocol OverlayControlling: AnyObject {
 
 @MainActor
 final class OverlayController: OverlayControlling {
-    private let style = OverlayStylePreset.typeWhisperMinimal
+    private let style = OverlayStylePreset.typeWhisperIndicator
     private let panel: NSPanel
-    private let closeControlPanel: NSPanel
+    private let panelRootView = OverlayPassthroughView()
     private let backgroundView = NSView()
     private let leadingContainer = NSView()
     private let leadingBadgeView = NSView()
     private let waveformView: OverlayWaveformView
     private let iconView = NSImageView()
-    private let closeButton = NSButton()
+    private let closeButton = OverlayHitTargetButton()
     private let titleLabel = NSTextField(labelWithString: "")
     private let detailLabel = NSTextField(labelWithString: "")
     private let trailingTimerLabel = NSTextField(labelWithString: "")
+    private let textStack = NSStackView()
+    private let trailingAccessoryStack = NSStackView()
     private var hideTask: Task<Void, Never>?
     private var processingTimer: Timer?
     private var processingFrameIndex = 0
@@ -59,30 +61,10 @@ final class OverlayController: OverlayControlling {
         panel.isOpaque = false
         panel.hidesOnDeactivate = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
-        panel.ignoresMouseEvents = true
-        closeControlPanel = NSPanel(
-            contentRect: NSRect(
-                x: 0,
-                y: 0,
-                width: style.closeControlDiameter + 8,
-                height: style.closeControlDiameter + 8
-            ),
-            styleMask: [.borderless, .nonactivatingPanel],
-            backing: .buffered,
-            defer: false
-        )
-        closeControlPanel.isFloatingPanel = true
-        closeControlPanel.level = .statusBar
-        closeControlPanel.backgroundColor = .clear
-        closeControlPanel.hasShadow = false
-        closeControlPanel.isOpaque = false
-        closeControlPanel.hidesOnDeactivate = false
-        closeControlPanel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
-        closeControlPanel.ignoresMouseEvents = false
+        panel.ignoresMouseEvents = false
         self.onCancel = onCancel
 
         configureViews()
-        configureCloseControl()
     }
 
     func showRecording(elapsedText: String) {
@@ -159,6 +141,7 @@ final class OverlayController: OverlayControlling {
         detailLabel.isHidden = !state.allowsSupplementaryText
         trailingTimerLabel.stringValue = state.trailingText ?? ""
         trailingTimerLabel.isHidden = state.trailingText == nil
+        trailingAccessoryStack.isHidden = !state.showsCancelControl && state.trailingText == nil
         updateSessionControls(for: state)
 
         switch state {
@@ -246,10 +229,6 @@ final class OverlayController: OverlayControlling {
         } else {
             panel.orderFrontRegardless()
         }
-
-        if currentState.showsCancelControl {
-            closeControlPanel.orderFrontRegardless()
-        }
     }
 
     private func scheduleHide(afterSeconds: Double) {
@@ -269,11 +248,16 @@ final class OverlayController: OverlayControlling {
     }
 
     private func configureViews() {
-        let container = NSView()
-        container.translatesAutoresizingMaskIntoConstraints = false
-        panel.contentView = container
-        container.wantsLayer = true
-        container.addSubview(backgroundView)
+        panelRootView.translatesAutoresizingMaskIntoConstraints = false
+        panelRootView.wantsLayer = false
+        panelRootView.interactiveViewsProvider = { [weak self] in
+            guard let self, self.currentState.showsCancelControl else {
+                return []
+            }
+            return [self.closeButton]
+        }
+        panel.contentView = panelRootView
+        panelRootView.addSubview(backgroundView)
 
         backgroundView.translatesAutoresizingMaskIntoConstraints = false
         backgroundView.wantsLayer = true
@@ -303,7 +287,7 @@ final class OverlayController: OverlayControlling {
         iconView.isHidden = true
 
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        titleLabel.font = .systemFont(ofSize: 14, weight: .semibold)
+        titleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
         titleLabel.textColor = ChatTypePalette.mist
         titleLabel.lineBreakMode = .byTruncatingTail
 
@@ -315,31 +299,52 @@ final class OverlayController: OverlayControlling {
         detailLabel.isHidden = true
 
         trailingTimerLabel.translatesAutoresizingMaskIntoConstraints = false
-        trailingTimerLabel.font = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .semibold)
-        trailingTimerLabel.textColor = ChatTypePalette.mistMuted
+        trailingTimerLabel.font = NSFont.monospacedDigitSystemFont(ofSize: style.timerFontSize, weight: .medium)
+        trailingTimerLabel.textColor = ChatTypePalette.mistMuted.withAlphaComponent(style.timerOpacity)
         trailingTimerLabel.alignment = .right
         trailingTimerLabel.isHidden = true
 
-        let textStack = NSStackView(views: [titleLabel, detailLabel])
         textStack.translatesAutoresizingMaskIntoConstraints = false
         textStack.orientation = .vertical
         textStack.spacing = 2
         textStack.alignment = .leading
+        textStack.addArrangedSubview(titleLabel)
+        textStack.addArrangedSubview(detailLabel)
+
+        closeButton.translatesAutoresizingMaskIntoConstraints = false
+        closeButton.isBordered = false
+        closeButton.bezelStyle = .regularSquare
+        closeButton.image = NSImage(systemSymbolName: "xmark.circle.fill", accessibilityDescription: "Cancel dictation")
+        closeButton.symbolConfiguration = .init(pointSize: 13, weight: .regular)
+        closeButton.imagePosition = .imageOnly
+        closeButton.contentTintColor = ChatTypePalette.mistMuted.withAlphaComponent(0.78)
+        closeButton.target = self
+        closeButton.action = #selector(handleCancelControlPressed)
+        closeButton.setButtonType(.momentaryChange)
+        closeButton.focusRingType = .none
+        closeButton.isHidden = true
+
+        trailingAccessoryStack.translatesAutoresizingMaskIntoConstraints = false
+        trailingAccessoryStack.orientation = .horizontal
+        trailingAccessoryStack.spacing = style.inlineControlGap
+        trailingAccessoryStack.alignment = .centerY
+        trailingAccessoryStack.addArrangedSubview(trailingTimerLabel)
+        trailingAccessoryStack.addArrangedSubview(closeButton)
 
         backgroundView.addSubview(leadingContainer)
         backgroundView.addSubview(textStack)
-        backgroundView.addSubview(trailingTimerLabel)
+        backgroundView.addSubview(trailingAccessoryStack)
         leadingContainer.addSubview(waveformView)
         leadingContainer.addSubview(leadingBadgeView)
         leadingContainer.addSubview(iconView)
 
         NSLayoutConstraint.activate([
-            backgroundView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            backgroundView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            backgroundView.topAnchor.constraint(equalTo: container.topAnchor),
-            backgroundView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+            backgroundView.leadingAnchor.constraint(equalTo: panelRootView.leadingAnchor),
+            backgroundView.trailingAnchor.constraint(equalTo: panelRootView.trailingAnchor),
+            backgroundView.topAnchor.constraint(equalTo: panelRootView.topAnchor),
+            backgroundView.bottomAnchor.constraint(equalTo: panelRootView.bottomAnchor),
 
-            leadingContainer.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 14),
+            leadingContainer.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: style.contentPaddingH),
             leadingContainer.centerYAnchor.constraint(equalTo: backgroundView.centerYAnchor),
             leadingContainer.widthAnchor.constraint(equalToConstant: style.leadingVisualWidth),
             leadingContainer.heightAnchor.constraint(equalToConstant: style.leadingVisualHeight),
@@ -351,21 +356,23 @@ final class OverlayController: OverlayControlling {
 
             leadingBadgeView.centerXAnchor.constraint(equalTo: leadingContainer.centerXAnchor),
             leadingBadgeView.centerYAnchor.constraint(equalTo: leadingContainer.centerYAnchor),
-            leadingBadgeView.widthAnchor.constraint(equalToConstant: 64),
-            leadingBadgeView.heightAnchor.constraint(equalToConstant: 36),
+            leadingBadgeView.widthAnchor.constraint(equalToConstant: 54),
+            leadingBadgeView.heightAnchor.constraint(equalToConstant: 30),
 
             iconView.centerXAnchor.constraint(equalTo: leadingBadgeView.centerXAnchor),
             iconView.centerYAnchor.constraint(equalTo: leadingBadgeView.centerYAnchor),
             iconView.widthAnchor.constraint(equalToConstant: 18),
             iconView.heightAnchor.constraint(equalToConstant: 18),
 
-            textStack.leadingAnchor.constraint(equalTo: leadingContainer.trailingAnchor, constant: 10),
-            textStack.trailingAnchor.constraint(lessThanOrEqualTo: trailingTimerLabel.leadingAnchor, constant: -10),
+            textStack.leadingAnchor.constraint(equalTo: leadingContainer.trailingAnchor, constant: style.textGap),
+            textStack.trailingAnchor.constraint(lessThanOrEqualTo: trailingAccessoryStack.leadingAnchor, constant: -style.textGap),
             textStack.centerYAnchor.constraint(equalTo: backgroundView.centerYAnchor),
 
-            trailingTimerLabel.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -16),
-            trailingTimerLabel.centerYAnchor.constraint(equalTo: backgroundView.centerYAnchor),
-            trailingTimerLabel.widthAnchor.constraint(equalToConstant: style.trailingTimerWidth),
+            trailingAccessoryStack.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -style.contentPaddingH),
+            trailingAccessoryStack.centerYAnchor.constraint(equalTo: backgroundView.centerYAnchor),
+            trailingTimerLabel.widthAnchor.constraint(equalToConstant: style.timerWidth),
+            closeButton.widthAnchor.constraint(equalToConstant: style.inlineCancelControlSize),
+            closeButton.heightAnchor.constraint(equalToConstant: style.inlineCancelControlSize),
         ])
     }
 
@@ -381,7 +388,6 @@ final class OverlayController: OverlayControlling {
             y: visibleFrame.minY + 116
         )
         panel.setFrame(NSRect(origin: origin, size: size), display: false)
-        positionCloseControlPanel()
     }
 
     private func activeScreen() -> NSScreen? {
@@ -389,58 +395,13 @@ final class OverlayController: OverlayControlling {
         return NSScreen.screens.first(where: { $0.frame.contains(mouseLocation) })
     }
 
-    private func configureCloseControl() {
-        let container = NSView(frame: closeControlPanel.contentRect(forFrameRect: closeControlPanel.frame))
-        container.wantsLayer = true
-        container.layer?.backgroundColor = NSColor.clear.cgColor
-        closeControlPanel.contentView = container
-
-        closeButton.translatesAutoresizingMaskIntoConstraints = false
-        closeButton.isBordered = false
-        closeButton.bezelStyle = .regularSquare
-        closeButton.wantsLayer = true
-        closeButton.layer?.cornerRadius = style.closeControlDiameter / 2
-        closeButton.layer?.backgroundColor = NSColor.systemRed.withAlphaComponent(0.94).cgColor
-        closeButton.image = NSImage(systemSymbolName: "xmark", accessibilityDescription: "Cancel dictation")
-        closeButton.symbolConfiguration = .init(pointSize: 7, weight: .bold)
-        closeButton.imagePosition = .imageOnly
-        closeButton.contentTintColor = NSColor.black.withAlphaComponent(0.72)
-        closeButton.target = self
-        closeButton.action = #selector(handleCancelControlPressed)
-
-        container.addSubview(closeButton)
-        NSLayoutConstraint.activate([
-            closeButton.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            closeButton.centerYAnchor.constraint(equalTo: container.centerYAnchor),
-            closeButton.widthAnchor.constraint(equalToConstant: style.closeControlDiameter),
-            closeButton.heightAnchor.constraint(equalToConstant: style.closeControlDiameter),
-        ])
-    }
-
     private func updateSessionControls(for state: OverlayVisualState) {
         if state.showsCancelControl {
-            positionCloseControlPanel()
+            closeButton.isHidden = false
             activateEscapeHotkeyIfNeeded()
         } else {
             hideSessionControls()
         }
-    }
-
-    private func positionCloseControlPanel() {
-        guard currentState.showsCancelControl else { return }
-
-        let buttonSize = NSSize(
-            width: style.closeControlDiameter + 8,
-            height: style.closeControlDiameter + 8
-        )
-        let origin = NSPoint(
-            x: panel.frame.minX + style.closeControlInsetX - 4,
-            y: panel.frame.maxY - style.closeControlInsetY - buttonSize.height + 4
-        )
-        closeControlPanel.setFrame(
-            NSRect(origin: origin, size: buttonSize),
-            display: false
-        )
     }
 
     private func activateEscapeHotkeyIfNeeded() {
@@ -454,12 +415,80 @@ final class OverlayController: OverlayControlling {
 
     private func hideSessionControls() {
         escapeHotkeyMonitor = nil
-        closeControlPanel.orderOut(nil)
+        closeButton.isHidden = true
     }
 
     @objc
     private func handleCancelControlPressed() {
         onCancel?()
+    }
+
+    @discardableResult
+    func debugSimulateCancelControlClick() -> Bool {
+        guard !closeButton.isHidden else {
+            return false
+        }
+
+        let centerInRoot = panelRootView.convert(
+            NSPoint(x: closeButton.bounds.midX, y: closeButton.bounds.midY),
+            from: closeButton
+        )
+        guard let hitView = panelRootView.hitTest(centerInRoot) as? NSControl else {
+            return false
+        }
+
+        hitView.performClick(nil)
+        return true
+    }
+
+    var debugSnapshot: OverlayDebugSnapshot {
+        OverlayDebugSnapshot(
+            usesIntegratedSessionControl: closeButton.superview === trailingAccessoryStack,
+            hasDetachedClosePanel: false,
+            panelIgnoresMouseEvents: panel.ignoresMouseEvents,
+            isCancelControlVisible: !closeButton.isHidden,
+            isTimerVisible: !trailingTimerLabel.isHidden
+        )
+    }
+}
+
+struct OverlayDebugSnapshot: Sendable, Equatable {
+    let usesIntegratedSessionControl: Bool
+    let hasDetachedClosePanel: Bool
+    let panelIgnoresMouseEvents: Bool
+    let isCancelControlVisible: Bool
+    let isTimerVisible: Bool
+}
+
+private final class OverlayPassthroughView: NSView {
+    var interactiveViewsProvider: (() -> [NSView])?
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        guard let interactiveViews = interactiveViewsProvider?() else {
+            return nil
+        }
+
+        for view in interactiveViews.reversed() where !view.isHidden && view.alphaValue > 0 {
+            let pointInView = view.convert(point, from: self)
+            if let hitView = view.hitTest(pointInView) {
+                return hitView
+            }
+        }
+
+        return nil
+    }
+}
+
+private final class OverlayHitTargetButton: NSButton {
+    private let hitTargetPadding: CGFloat = 6
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        let hitBounds = bounds.insetBy(dx: -hitTargetPadding, dy: -hitTargetPadding)
+        return hitBounds.contains(point) ? self : nil
+    }
+
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
+        true
     }
 }
 
@@ -503,7 +532,7 @@ private final class OverlayWaveformView: NSView {
         let totalSpacing = style.waveformBarSpacing * CGFloat(max(0, activeLevels.count - 1))
         let availableWidth = bounds.width - totalSpacing
         let rawBarWidth = availableWidth / CGFloat(max(1, activeLevels.count))
-        let barWidth = max(3, min(4, floor(rawBarWidth)))
+        let barWidth = max(2, min(3, floor(rawBarWidth)))
         let contentWidth = (barWidth * CGFloat(activeLevels.count)) + totalSpacing
         var x = bounds.midX - (contentWidth / 2)
         let center = CGFloat(max(0, activeLevels.count - 1)) / 2

@@ -13,11 +13,16 @@
    - signed-in Codex desktop session shows as ready
    - microphone state is reported correctly
    - Accessibility state is reported correctly
+   - denied microphone state exposes `Open Microphone Settings`
+   - missing Accessibility exposes `Guide Accessibility Access`, `Open Accessibility Settings`, and `Refresh Status`
 7. Verify runtime behavior:
    - HUD appears on `F5`
    - recording stops on second `F5`
    - missing Codex desktop install produces a clear setup blocker
    - missing ChatGPT login in Codex produces a clear setup blocker
+   - first-run microphone flow still surfaces the native macOS system prompt
+   - denied microphone flow jumps to `Privacy & Security > Microphone`
+   - Accessibility guidance opens the correct page and shows the drag-to-authorize helper for the packaged app
    - paste vs clipboard fallback behaves correctly
    - settings do not expose a second AI cleanup stage in the main flow
    - TypeWhisper terminology import is visible in Settings and succeeds against a valid local dictionary
@@ -34,9 +39,10 @@
    - mount `dist/ChatType-0.1.2-macos-arm64.dmg`
    - install the mounted `ChatType.app` to `/Applications/ChatType.app`
    - launch `/Applications/ChatType.app`
-10. If you are announcing the release on X, preview the outgoing post first:
+10. If you are announcing the release on X, preview the outgoing post first and send it through `chrome-use` on the managed Chrome for Testing session:
    - `scripts/post_x.sh --print "ChatType update"`
    - `scripts/post_x.sh "ChatType update"`
+   - treat the post as complete only after the command returns the published post URL
 11. Update docs if any onboarding, naming, packaging, or launch assumptions changed.
 
 ## Gatekeeper Notes

@@ -1,7 +1,9 @@
 import AppKit
 import ApplicationServices
 import Foundation
+import PermissionFlow
 import Security
+import SystemSettingsKit
 
 enum AccessibilityPermission {
     typealias TrustCheck = () -> Bool
@@ -19,7 +21,10 @@ enum AccessibilityPermission {
     }
 
     private static let promptOptionKey = "AXTrustedCheckOptionPrompt"
-    private static let accessibilitySettingsURL = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
+    @MainActor
+    private static var permissionFlowController = PermissionFlow.makeController(
+        configuration: .init(promptForAccessibilityTrust: false)
+    )
 
     static func isTrusted(
         trustCheck: TrustCheck = { AXIsProcessTrusted() }
@@ -44,12 +49,48 @@ enum AccessibilityPermission {
         return prompt()
     }
 
-    static func openAccessibilitySettings(workspace: NSWorkspace = .shared) {
-        guard let accessibilitySettingsURL else {
+    static func repairActions() -> [PermissionRepairAction] {
+        [
+            PermissionRepairAction(
+                title: "Guide Accessibility Access",
+                kind: .guidedAccessibilityAccess,
+                prominence: .primary
+            ),
+            PermissionRepairAction(
+                title: "Open Accessibility Settings",
+                kind: .openSettings(accessibilitySettingsDestination()),
+                prominence: .secondary
+            ),
+            PermissionRepairAction(
+                title: "Refresh Status",
+                kind: .refreshStatus,
+                prominence: .utility
+            ),
+        ]
+    }
+
+    static func accessibilitySettingsDestination() -> PermissionSettingsDestination {
+        .accessibility
+    }
+
+    @MainActor
+    static func guideAccess(sourceFrameInScreen: CGRect? = nil) {
+        guard !isTrusted() else {
             return
         }
 
-        workspace.open(accessibilitySettingsURL)
+        _ = requestTrustIfNeeded()
+        permissionFlowController.authorize(
+            pane: .accessibility,
+            suggestedAppURLs: [Bundle.main.bundleURL],
+            sourceFrameInScreen: sourceFrameInScreen
+        )
+    }
+
+    @MainActor
+    @discardableResult
+    static func openAccessibilitySettings() -> Bool {
+        accessibilitySettingsDestination().open()
     }
 
     static func signatureState(bundleURL: URL = Bundle.main.bundleURL) -> SignatureState {

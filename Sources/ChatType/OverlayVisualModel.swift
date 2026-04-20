@@ -7,8 +7,11 @@ struct OverlayStylePreset: Sendable, Equatable {
     let pillHeight: CGFloat
     let errorPillWidth: CGFloat
     let cornerRadius: CGFloat
+    let contentPaddingH: CGFloat
+    let contentPaddingV: CGFloat
     let leadingVisualWidth: CGFloat
     let leadingVisualHeight: CGFloat
+    let textGap: CGFloat
     let waveformBarCount: Int
     let waveformBarSpacing: CGFloat
     let waveformMinimumBarHeight: CGFloat
@@ -17,31 +20,38 @@ struct OverlayStylePreset: Sendable, Equatable {
     let processingAutoHideDelay: TimeInterval?
     let successAutoHideDelay: TimeInterval?
     let errorAutoHideDelay: TimeInterval?
-    let closeControlDiameter: CGFloat
-    let closeControlInsetX: CGFloat
-    let closeControlInsetY: CGFloat
-    let trailingTimerWidth: CGFloat
+    let inlineCancelControlSize: CGFloat
+    let inlineControlGap: CGFloat
+    let inlineControlReservedWidth: CGFloat
+    let timerWidth: CGFloat
+    let timerFontSize: CGFloat
+    let timerOpacity: CGFloat
 
-    static let typeWhisperMinimal = OverlayStylePreset(
+    static let typeWhisperIndicator = OverlayStylePreset(
         pillWidth: 220,
-        recordingPillWidth: 256,
-        pillHeight: 56,
-        errorPillWidth: 320,
-        cornerRadius: 18,
-        leadingVisualWidth: 76,
-        leadingVisualHeight: 30,
+        recordingPillWidth: 246,
+        pillHeight: 48,
+        errorPillWidth: 318,
+        cornerRadius: 16,
+        contentPaddingH: 12,
+        contentPaddingV: 9,
+        leadingVisualWidth: 62,
+        leadingVisualHeight: 22,
+        textGap: 8,
         waveformBarCount: 9,
-        waveformBarSpacing: 4,
+        waveformBarSpacing: 3,
         waveformMinimumBarHeight: 6,
         showsTranscriptPreview: false,
         recordingAutoHideDelay: nil,
         processingAutoHideDelay: nil,
         successAutoHideDelay: 1.2,
         errorAutoHideDelay: 2.0,
-        closeControlDiameter: 12,
-        closeControlInsetX: 10,
-        closeControlInsetY: 10,
-        trailingTimerWidth: 42
+        inlineCancelControlSize: 16,
+        inlineControlGap: 6,
+        inlineControlReservedWidth: 22,
+        timerWidth: 36,
+        timerFontSize: 11,
+        timerOpacity: 0.76
     )
 
     func width(for state: OverlayVisualState) -> CGFloat {
@@ -58,7 +68,6 @@ struct OverlayStylePreset: Sendable, Equatable {
 
 enum OverlayLeadingVisual: Sendable, Equatable {
     case waveform
-    case spinner
     case icon(symbolName: String)
 }
 
@@ -100,7 +109,7 @@ enum OverlayVisualState: Sendable, Equatable {
         case .recording:
             return .waveform
         case .processing:
-            return .spinner
+            return .waveform
         case .success(let kind):
             return .icon(symbolName: kind == .pasted ? "checkmark.circle.fill" : "doc.on.clipboard.fill")
         case .error:

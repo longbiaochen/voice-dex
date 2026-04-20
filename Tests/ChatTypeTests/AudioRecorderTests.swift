@@ -42,6 +42,25 @@ private actor AccessRequestProbe {
 
 struct AudioRecorderTests {
     @Test
+    func microphoneRepairActionsAppearOnlyWhenPermissionWasDenied() {
+        #expect(AudioRecorder.repairActions(for: .granted).isEmpty)
+        #expect(AudioRecorder.repairActions(for: .undetermined).isEmpty)
+
+        let actions = AudioRecorder.repairActions(for: .denied)
+        #expect(actions.count == 1)
+        #expect(actions[0].title == "Open Microphone Settings")
+        #expect(
+            actions[0].kind == .openSettings(
+                PermissionSettingsDestination(
+                    url: URL(string: "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Microphone")!,
+                    paneIdentifier: "com.apple.settings.PrivacySecurity.extension",
+                    anchor: "Privacy_Microphone"
+                )
+            )
+        )
+    }
+
+    @Test
     func microphoneAccessRequestsSystemPromptWhenStatusIsUndetermined() async throws {
         let probe = AccessRequestProbe()
 

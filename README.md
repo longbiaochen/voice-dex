@@ -33,14 +33,17 @@ It is intentionally opinionated:
 1. Install `ChatType`
 2. Install the packaged app to `/Applications/ChatType.app`, then launch that installed copy on a Mac that already has Codex desktop installed and signed in with ChatGPT
 3. Grant microphone permission
-4. Grant Accessibility if you want auto-paste
-5. Put the cursor in Notes, Mail, Slack, Codex, or another editable target
-6. Press `F5`, speak, press `F5` again
-7. `ChatType` sends the recording through the local login-state bridge to the ChatGPT backend transcription path
-8. Optional: import a TypeWhisper terminology snapshot in Settings to strengthen post-STT technical-term alignment
-9. `ChatType` applies a deterministic local terminology-alignment pass plus any hidden exact `hintTerms`
-10. The result is pasted into the focused app or left in the clipboard when paste is not safe
-11. Chinese output defaults to Simplified Chinese unless the original speech clearly asks for Traditional Chinese
+4. If microphone access was denied earlier, use `Open Microphone Settings` in `ChatType Settings`
+5. If you want auto-paste, use `Guide Accessibility Access` in `ChatType Settings`
+6. `ChatType` opens the Accessibility page and shows a drag-to-authorize helper around the packaged app
+7. If `ChatType` still does not appear there, click `+` in Accessibility and add `/Applications/ChatType.app`
+8. Put the cursor in Notes, Mail, Slack, Codex, or another editable target
+9. Press `F5`, speak, press `F5` again
+10. `ChatType` sends the recording through the local login-state bridge to the ChatGPT backend transcription path
+11. Optional: import a TypeWhisper terminology snapshot in Settings to strengthen post-STT technical-term alignment
+12. `ChatType` applies a deterministic local terminology-alignment pass plus any hidden exact `hintTerms`
+13. The result is pasted into the focused app or left in the clipboard when paste is not safe
+14. Chinese output defaults to Simplified Chinese unless the original speech clearly asks for Traditional Chinese
 
 ## Installation
 
@@ -64,7 +67,7 @@ If you intentionally need an ad-hoc build for throwaway debugging, opt into it e
 CHATTYPE_ALLOW_ADHOC_SIGNING=1 ./scripts/package_app.sh
 ```
 
-That fallback is not recommended for normal use. On recent macOS versions it can open Accessibility settings without creating a toggleable `ChatType` row.
+That fallback is not recommended for normal use. On recent macOS versions it can still leave Accessibility without a toggleable `ChatType` row, which is why the packaged `/Applications/ChatType.app` path matters for the new guided repair flow as well.
 
 3. Launch the installed app:
 
@@ -131,12 +134,14 @@ Benchmark the real packaged path with your own sample audio:
 ./scripts/benchmark_stt.sh ~/bench/3s.wav ~/bench/10s.wav ~/bench/30s.wav
 ```
 
-Post a release update to X through the official API CLI:
+Post a release update to X through `chrome-use` and the managed Chrome for Testing session:
 
 ```bash
 scripts/post_x.sh --print "ChatType update"
 scripts/post_x.sh "ChatType update"
 ```
+
+The actual send path now uses the same Chrome for Testing browser session for publish and post-page verification. If X is not signed in there yet, sign in inside that managed browser session first.
 
 ## Config
 
@@ -146,15 +151,20 @@ scripts/post_x.sh "ChatType update"
 ~/Library/Application Support/ChatType/config.json
 ```
 
-It migrates older config from:
-
-- `~/Library/Application Support/VoiceDex/config.json`
-- `~/Library/Application Support/HotkeyVoice/config.json`
-
 Advanced terminology options:
 
 - import TypeWhisper terminology from the Settings window with `Import from TypeWhisper`
 - keep `transcription.hintTerms` for exact-only custom terms you want preserved even without a TypeWhisper import
+
+## Permission Repair
+
+`ChatType Settings` now separates first-run prompts from repair actions:
+
+- microphone first-run access still comes from the native macOS prompt when you record for the first time
+- if microphone access was denied earlier, use `Open Microphone Settings` to jump straight to `Privacy & Security > Microphone`
+- if Accessibility is missing, use `Guide Accessibility Access` to open the correct settings page and show the drag-to-authorize helper for `/Applications/ChatType.app`
+- `Open Accessibility Settings` remains available as a simpler fallback when you only want the deeplink
+- `Refresh Status` re-checks the live permission state after you return from System Settings
 
 ## Risks And Boundaries
 

@@ -130,6 +130,20 @@ final class AudioRecorder: RecordingControlling {
         }
     }
 
+    nonisolated static func repairActions(for state: MicrophonePermissionState) -> [PermissionRepairAction] {
+        guard state == .denied else {
+            return []
+        }
+
+        return [
+            PermissionRepairAction(
+                title: "Open Microphone Settings",
+                kind: .openSettings(.microphone),
+                prominence: .secondary
+            ),
+        ]
+    }
+
     nonisolated static func ensureMicrophoneAccess(
         permissionProvider: PermissionProvider = { microphonePermissionState() },
         requestPermission: @escaping PermissionRequester = {

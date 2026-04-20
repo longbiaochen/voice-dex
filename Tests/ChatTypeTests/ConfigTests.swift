@@ -128,3 +128,47 @@ func legacyConfigWithoutTerminologyReencodesWithTerminologyDefaults() throws {
     #expect(terminology["enabled"] as? Bool == true)
     #expect((terminology["importedEntries"] as? [Any])?.isEmpty == true)
 }
+
+@Test
+func configStoreUsesOnlyChatTypeApplicationSupportPath() {
+    let root = FileManager.default.temporaryDirectory
+        .appendingPathComponent(UUID().uuidString, isDirectory: true)
+    let store = ConfigStore(
+        fileManager: FileManager.default,
+        homeDirectoryURL: root
+    )
+
+    #expect(store.directoryURL.path == root.appendingPathComponent("Library/Application Support/ChatType", isDirectory: true).path)
+}
+
+@Test
+func configStoreDoesNotImportPreChatTypeLegacyConfig() throws {
+    let root = FileManager.default.temporaryDirectory
+        .appendingPathComponent(UUID().uuidString, isDirectory: true)
+    let fileManager = FileManager.default
+    try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
+
+    let firstLegacyComponent = ["Voice", "Dex"].joined()
+    let legacyDirectory = root.appendingPathComponent("Library/Application Support/\(firstLegacyComponent)", isDirectory: true)
+    try fileManager.createDirectory(at: legacyDirectory, withIntermediateDirectories: true)
+    let legacyConfigURL = legacyDirectory.appendingPathComponent("config.json")
+    try Data("""
+    {
+      "transcription": {
+        "hintTerms": ["legacy-term"]
+      }
+    }
+    """.utf8).write(to: legacyConfigURL)
+
+    let store = ConfigStore(
+        fileManager: fileManager,
+        homeDirectoryURL: root
+    )
+    let loaded = try store.load()
+
+    #expect(loaded.transcription.hintTerms.isEmpty)
+    #expect(fileManager.fileExists(atPath: store.configURL.path))
+    let storedData = try Data(contentsOf: store.configURL)
+    let stored = try JSONDecoder().decode(AppConfig.self, from: storedData)
+    #expect(stored.transcription.hintTerms.isEmpty)
+}

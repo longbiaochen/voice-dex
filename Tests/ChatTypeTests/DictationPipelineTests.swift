@@ -202,3 +202,68 @@ func dictationPipelineReportsExactAndFuzzyReplacementCounts() async throws {
     #expect(result.exactReplacementCount == 1)
     #expect(result.fuzzyReplacementCount == 1)
 }
+
+@Test
+func dictationPipelineStripsTrailingCodexComposerArtifactFromFinalText() async throws {
+    let pipeline = DictationPipeline(
+        transcriber: FakeTranscriber(
+            result: TranscriptionResult(
+                text: "请把这段话发给产品同学确认一下。 Ask Codex anything. @ to use plugins or use files",
+                metrics: .init(
+                    provider: .codexChatGPTBridge,
+                    audioDurationMs: 2_000,
+                    audioBytes: 128_000,
+                    authMs: 50,
+                    transcribeMs: 400,
+                    promptIncluded: false
+                )
+            )
+        ),
+        normalizer: TerminologyNormalizer(),
+        importedEntries: [],
+        hintTerms: []
+    )
+
+    let audio = RecordedAudio(
+        fileURL: FileManager.default.temporaryDirectory.appendingPathComponent("fake-3.wav"),
+        durationMs: 2_000
+    )
+
+    let result = try await pipeline.prepare(audio: audio)
+    #expect(result.rawText == "请把这段话发给产品同学确认一下。 Ask Codex anything. @ to use plugins or use files")
+    #expect(result.finalText == "请把这段话发给产品同学确认一下。")
+    #expect(result.normalizationApplied == true)
+    #expect(result.exactReplacementCount == 0)
+    #expect(result.fuzzyReplacementCount == 0)
+}
+
+@Test
+func dictationPipelineStripsTrailingCodexComposerArtifactWhenItAppearsOnSeparateLine() async throws {
+    let pipeline = DictationPipeline(
+        transcriber: FakeTranscriber(
+            result: TranscriptionResult(
+                text: "请把这段话发给产品同学确认一下。\nAsk Codex anything. @ to use plugins or use files",
+                metrics: .init(
+                    provider: .codexChatGPTBridge,
+                    audioDurationMs: 2_000,
+                    audioBytes: 128_000,
+                    authMs: 50,
+                    transcribeMs: 400,
+                    promptIncluded: false
+                )
+            )
+        ),
+        normalizer: TerminologyNormalizer(),
+        importedEntries: [],
+        hintTerms: []
+    )
+
+    let audio = RecordedAudio(
+        fileURL: FileManager.default.temporaryDirectory.appendingPathComponent("fake-4.wav"),
+        durationMs: 2_000
+    )
+
+    let result = try await pipeline.prepare(audio: audio)
+    #expect(result.finalText == "请把这段话发给产品同学确认一下。")
+    #expect(result.normalizationApplied == true)
+}

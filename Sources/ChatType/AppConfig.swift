@@ -116,24 +116,20 @@ enum ConfigError: LocalizedError {
 }
 
 struct ConfigStore {
-    let fileManager: FileManager = .default
+    let fileManager: FileManager
+    let homeDirectoryURL: URL
+
+    init(
+        fileManager: FileManager = .default,
+        homeDirectoryURL: URL? = nil
+    ) {
+        self.fileManager = fileManager
+        self.homeDirectoryURL = homeDirectoryURL ?? fileManager.homeDirectoryForCurrentUser
+    }
 
     var directoryURL: URL {
-        fileManager.homeDirectoryForCurrentUser
+        homeDirectoryURL
             .appendingPathComponent("Library/Application Support/ChatType", isDirectory: true)
-    }
-
-    var legacyDirectoryURLs: [URL] {
-        [
-            fileManager.homeDirectoryForCurrentUser
-                .appendingPathComponent("Library/Application Support/VoiceDex", isDirectory: true),
-            fileManager.homeDirectoryForCurrentUser
-                .appendingPathComponent("Library/Application Support/HotkeyVoice", isDirectory: true),
-        ]
-    }
-
-    var legacyConfigURLs: [URL] {
-        legacyDirectoryURLs.map { $0.appendingPathComponent("config.json") }
     }
 
     var configURL: URL {
@@ -142,10 +138,6 @@ struct ConfigStore {
 
     func load() throws -> AppConfig {
         try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)
-        if !fileManager.fileExists(atPath: configURL.path),
-           let legacyConfigURL = legacyConfigURLs.first(where: { fileManager.fileExists(atPath: $0.path) }) {
-            try fileManager.copyItem(at: legacyConfigURL, to: configURL)
-        }
 
         guard fileManager.fileExists(atPath: configURL.path) else {
             let config = AppConfig()

@@ -6,8 +6,21 @@
 - Do not run `ChatType.app` directly from `dist`; that path is build output only and must not own live TCC permissions.
 - For first-run macOS permission flows, verify from a clean TCC state on the installed `/Applications/ChatType.app` path. Do not let host/login/setup preflights run ahead of the system permission request when the permission state is still `not determined`.
 - Treat `.notDetermined` permission paths as their own regression surface: keep an automated test for the ordering and do one real installed-app check after permission resets before calling the flow fixed.
+- For UI work in this repo, use this verification ladder in order: unit tests, integration tests, then real user-flow testing. The first two are prechecks only; completion requires live user-flow closure.
+- For native GUI work in this repo, use official Computer Use to simulate real user behavior before returning whenever the change touches clicks, hotkeys, focus, timing, modal state, permissions, or other multi-step interaction.
+- Do not treat screenshots, logs, window-state inspection, or a single happy-path run as completion for interactive UI work. Use them only as supporting evidence around a full live interaction pass.
 - Keep paste behavior conservative: paste only when a focused editable target is detected; otherwise leave the final text in the clipboard.
 - For this repo, "ship it" means more than source changes: run the canonical harness, build the packaged app, install it to `/Applications/ChatType.app`, validate behavior from that installed app, and keep release-facing docs current.
+- For ChatType interaction changes, user-flow closure should cover the primary success path, the cancel or close path, the retry or re-entry path, and any obvious alternate interaction path for the same task when one exists.
+- For ChatType closeouts, report which installed-app user flow was exercised, which live verification path was used, and what exact live outcome was observed.
+- ChatType Computer Use acceptance should, when applicable, cover this loop on the installed app:
+  - focus a real editable target on the correct display;
+  - start with `F5`;
+  - stop with `F5`;
+  - cancel with `ESC`;
+  - cancel with the inline close control;
+  - retry by starting again after cancel or error;
+  - verify the observed HUD state transitions and the final paste-versus-clipboard result.
 - Launch copy for this repo should describe the real public path first: local Codex desktop login, `F5` to record, transcription, and paste-versus-clipboard fallback.
 - Keep the private ChatGPT backend dependency explicit in docs and UX. Do not describe it as a stable public API.
 - Keep `OpenAI-Compatible` positioned as advanced recovery, not the default public story.

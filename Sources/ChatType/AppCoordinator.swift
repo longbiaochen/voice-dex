@@ -191,7 +191,7 @@ final class AppCoordinator {
         activeSessionID = sessionID
         state = .processing
         statusMenu?.update(state: .processing, detail: "Requesting microphone")
-        overlay.showRecording(elapsedText: "00:00")
+        overlay.showProcessing()
 
         startRecordingTask?.cancel()
         startRecordingTask = Task { @MainActor [weak self] in
@@ -230,6 +230,7 @@ final class AppCoordinator {
                 self.recordingStartedAt = .now()
                 self.state = .recording
                 self.statusMenu?.update(state: .recording, detail: "Recording on F5")
+                self.overlay.showRecording(elapsedText: "00:00")
                 self.startRecordingLevelUpdates()
             } catch is CancellationError {
                 self.cancelCurrentSession()

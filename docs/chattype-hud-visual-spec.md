@@ -4,21 +4,22 @@ This spec mirrors the HUD implementation currently shipped in `dist/ChatType.app
 
 ## Core Shell
 
-- Container: graphite pill
-- Processing / success size: `220 x 56`
-- Recording size: `256 x 56`
-- Error size: `320 x 56`
-- Corner radius: `18`
+- Container: one integrated TypeWhisper-style graphite indicator
+- Processing / success size: `220 x 48`
+- Recording size: `246 x 48`
+- Error size: `318 x 48`
+- Corner radius: `16`
 - Border: `1px`, mist at `8%` opacity
 - Shadow: short, low-contrast black shadow
 - Layout:
-  - leading visual width: `76`
-  - leading visual height: `30`
-  - leading inset: `14`
-  - text gap: `10`
-  - trailing inset: `16`
-  - trailing timer reserve: `42`
-  - close control: `12 x 12`, inset from top-left by `10`
+  - horizontal padding: `12`
+  - vertical padding: `9`
+  - leading visual width: `62`
+  - leading visual height: `22`
+  - text gap: `8`
+  - trailing timer reserve: `36`
+  - inline cancel control: `16 x 16`
+  - cancel control spacing from timer: `6`
 
 ## Color Tokens
 
@@ -33,28 +34,33 @@ This spec mirrors the HUD implementation currently shipped in `dist/ChatType.app
 ## Typography
 
 - Title:
-  - size: `14`
+  - size: `13`
   - weight: semibold
   - color: Mist
 - Detail:
   - size: `11`
   - weight: medium
   - color: Mist Muted
+- Timer:
+  - size: `11`
+  - weight: medium
+  - color: Mist Muted at roughly `76%` opacity
+  - uses monospaced digits
 
 ## Recording
 
 - Title: `Listening`
 - Cancel affordances:
   - `ESC` cancels the current session
-  - a red macOS-style close control sits at the top-left of the pill
-- Leading visual: 9 thin waveform bars
+  - an inline `xmark.circle.fill` cancel control sits inside the right-side accessory row
+- Leading visual: 9 compact waveform bars grouped as one activity cluster
 - Bar count: `9`
-- Bar spacing: `4`
+- Bar spacing: `3`
 - Minimum bar height: `6`
 - Trailing timer:
   - visible only while recording
   - format `mm:ss`
-  - uses compact monospaced digits on the right edge
+  - sits in the same accessory row as the cancel control
 - Shape rule:
   - center bar should be the tallest
   - bars fall off symmetrically toward the edges
@@ -72,7 +78,7 @@ Reference profile:
 - Title: `Processing`
 - Cancel affordances remain active:
   - `ESC` cancels the current transcription
-  - the close control still dismisses the in-flight session
+  - the inline cancel control still dismisses the in-flight session
 - Timer is hidden in this state
 - Leading visual: same 9-bar skeleton as recording
 - Animation rule:
@@ -90,8 +96,8 @@ Reference frames:
 
 - Title: `Pasted`
 - No cancel affordance in this state
-- Leading visual: rounded badge inside the same pill system
-- Badge size: `64 x 36`
+- Leading visual: rounded badge inside the same unified indicator shell
+- Badge size: `54 x 30`
 - Badge radius: `18`
 - Fill: Success at low opacity
 - Border: Success at medium opacity
@@ -111,7 +117,7 @@ Reference frames:
 - Title: `Error`
 - No cancel affordance in this state
 - Detail text is visible
-- Leading visual: same badge container as success/copy
+- Leading visual: same badge container as success/copy, inside the same integrated shell
 - Fill: Error at low opacity
 - Border: Error at medium opacity
 - Icon: exclamation mark
@@ -134,6 +140,7 @@ When the MCP quota resets, the `HUD` board in Figma should contain:
    - `Error` card with one error pill
 
 4. Rules block
-   - 9 bars, never return to the older dense 12/16-bar block
-   - Ice Blue stays concentrated on the active center bars
-   - Success/copy/error remain inside the same branded pill architecture
+  - 9 bars, never return to the older dense 12/16-bar block
+  - no detached cancel panel or floating red dot outside the shell
+  - Ice Blue stays concentrated on the active center bars
+  - Success/copy/error remain inside the same branded indicator architecture

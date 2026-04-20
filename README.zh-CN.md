@@ -32,14 +32,16 @@
 1. 安装 `ChatType`
 2. 把打包后的应用安装到 `/Applications/ChatType.app`，并从这个已安装路径启动
 3. 确保这台 Mac 上已经安装并登录了 Codex Desktop / ChatGPT Desktop
-4. 授予麦克风权限
-5. 如果希望自动回填到当前输入框，授予 Accessibility 权限
-6. 把光标放到 Notes、Mail、Slack、Codex 等可编辑位置
-7. 按一次 `F5` 开始录音，再按一次 `F5` 结束录音
-8. `ChatType` 通过本地桌面登录态把音频送到 ChatGPT 转写路径
-9. 可选：在设置页里导入一份 TypeWhisper 术语快照，增强 STT 后的术语对齐
-10. `ChatType` 会做本地确定性术语对齐，并叠加隐藏的精确 `hintTerms`
-11. 结果会直接回填到当前输入位置；如果当前目标不适合安全粘贴，就保留在剪贴板
+4. 首次录音时授予麦克风权限；如果之前拒绝过，可在设置页点 `Open Microphone Settings`
+5. 如果希望自动回填到当前输入框，在设置页点 `Guide Accessibility Access`
+6. `ChatType` 会打开正确的 Accessibility 页面，并用拖拽式引导帮助你把已安装应用授权进去
+7. 如果列表里还是没有 `ChatType`，就在 Accessibility 页点击 `+`，手动添加 `/Applications/ChatType.app`
+8. 把光标放到 Notes、Mail、Slack、Codex 等可编辑位置
+9. 按一次 `F5` 开始录音，再按一次 `F5` 结束录音
+10. `ChatType` 通过本地桌面登录态把音频送到 ChatGPT 转写路径
+11. 可选：在设置页里导入一份 TypeWhisper 术语快照，增强 STT 后的术语对齐
+12. `ChatType` 会做本地确定性术语对齐，并叠加隐藏的精确 `hintTerms`
+13. 结果会直接回填到当前输入位置；如果当前目标不适合安全粘贴，就保留在剪贴板
 
 ## 安装
 
@@ -63,7 +65,7 @@
 CHATTYPE_ALLOW_ADHOC_SIGNING=1 ./scripts/package_app.sh
 ```
 
-但这不适合作为正常使用路径。较新的 macOS 上，ad-hoc build 可能会导致 Accessibility 设置里没有可切换的 `ChatType` 项。
+但这不适合作为正常使用路径。较新的 macOS 上，ad-hoc build 可能会导致 Accessibility 设置里没有可切换的 `ChatType` 项；新的引导式权限修复也依赖 `/Applications/ChatType.app` 这个真实安装路径。
 
 3. 启动已安装应用：
 
@@ -130,12 +132,14 @@ swift test --package-path .
 ./scripts/benchmark_stt.sh ~/bench/3s.wav ~/bench/10s.wav ~/bench/30s.wav
 ```
 
-如果你要通过官方 API CLI 发 X：
+如果你要发 X，现在走 `chrome-use` 和受管的 Chrome for Testing 会话：
 
 ```bash
 scripts/post_x.sh --print "ChatType update"
 scripts/post_x.sh "ChatType update"
 ```
+
+真正发送时会在同一个 Chrome for Testing 会话里完成发布和帖子页面验证。如果那个受管浏览器里还没登录 X，需要先在那里登录。
 
 ## 配置
 
@@ -145,15 +149,20 @@ scripts/post_x.sh "ChatType update"
 ~/Library/Application Support/ChatType/config.json
 ```
 
-它会兼容迁移旧路径：
-
-- `~/Library/Application Support/VoiceDex/config.json`
-- `~/Library/Application Support/HotkeyVoice/config.json`
-
 术语相关的高级选项：
 
 - 在设置页中用 `Import from TypeWhisper` 导入 TypeWhisper 术语
 - 用 `transcription.hintTerms` 保留不想被改动的 exact-only 自定义术语
+
+## 权限修复
+
+`ChatType Settings` 现在把首次系统弹窗和后续修复动作分开处理：
+
+- 麦克风首次授权仍然走 macOS 原生系统弹窗
+- 如果麦克风之前被拒绝，可点 `Open Microphone Settings` 直接跳到 `Privacy & Security > Microphone`
+- 如果 Accessibility 没开，可点 `Guide Accessibility Access`，打开正确的设置页并显示针对 `/Applications/ChatType.app` 的拖拽式授权引导
+- `Open Accessibility Settings` 仍然保留，作为只想直接跳转设置页时的次级入口
+- `Refresh Status` 会在你从系统设置返回后重新检测实时权限状态
 
 ## 风险与边界
 

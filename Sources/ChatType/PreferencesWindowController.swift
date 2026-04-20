@@ -48,7 +48,7 @@ final class PreferencesWindowController: NSWindowController {
 private struct PreferencesView: View {
     @State private var config: AppConfig
     @State private var showsAdvancedRecovery: Bool
-    @State private var accessibilityRefreshNonce: Int = 0
+    @State private var permissionRefreshNonce: Int = 0
     @State private var terminologyImportMessage: String?
     @State private var terminologyImportIsError = false
 
@@ -103,18 +103,23 @@ private struct PreferencesView: View {
     }
 
     private var microphoneStatus: SetupStatus {
+        _ = permissionRefreshNonce
         switch AudioRecorder.microphonePermissionState() {
         case .granted:
             return SetupStatus(title: "Granted", subtitle: "Microphone access is ready.")
         case .undetermined:
             return SetupStatus(title: "Not requested yet", subtitle: "Press F5 once and macOS will ask for microphone access.", isReady: false)
         case .denied:
-            return SetupStatus(title: "Needs permission", subtitle: "Enable microphone access in System Settings > Privacy & Security.", isReady: false)
+            return SetupStatus(
+                title: "Needs permission",
+                subtitle: "Microphone access was previously denied. Open Privacy & Security > Microphone to re-enable it.",
+                isReady: false
+            )
         }
     }
 
     private var accessibilityStatus: SetupStatus {
-        _ = accessibilityRefreshNonce
+        _ = permissionRefreshNonce
         let guidance = AccessibilityPermission.repairGuidance()
 
         if AccessibilityPermission.isTrusted() {
@@ -126,6 +131,18 @@ private struct PreferencesView: View {
             subtitle: guidance.subtitle,
             isReady: false
         )
+    }
+
+    private var accessibilityRepairActions: [PermissionRepairAction] {
+        guard !AccessibilityPermission.isTrusted() else {
+            return []
+        }
+
+        return AccessibilityPermission.repairActions()
+    }
+
+    private var microphoneRepairActions: [PermissionRepairAction] {
+        AudioRecorder.repairActions(for: AudioRecorder.microphonePermissionState())
     }
 
     var body: some View {
@@ -243,7 +260,7 @@ private struct PreferencesView: View {
         }
         .frame(minWidth: 680, minHeight: 760)
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            accessibilityRefreshNonce += 1
+            permissionRefreshNonce += 1
         }
     }
 
@@ -265,31 +282,18 @@ private struct PreferencesView: View {
             Text("Setup Check")
                 .font(.system(size: 13, weight: .semibold))
             setupRow(title: "Codex Desktop Login", status: hostStatus)
-            setupRow(title: "Microphone", status: microphoneStatus)
-            setupRow(title: "Accessibility", status: accessibilityStatus)
-            if !AccessibilityPermission.isTrusted() {
-                let guidance = AccessibilityPermission.repairGuidance()
-                if let detail = guidance.detail {
-                    Text(detail)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                HStack(spacing: 10) {
-                    Button("Request Accessibility Access") {
-                        AccessibilityPermission.requestTrustIfNeeded()
-                        accessibilityRefreshNonce += 1
-                    }
-
-                    Button("Open Accessibility Settings") {
-                        AccessibilityPermission.openAccessibilitySettings()
-                    }
-
-                    Button("Refresh Status") {
-                        accessibilityRefreshNonce += 1
-                    }
-                }
-            }
+            permissionSetupSection(
+                title: "Microphone",
+                status: microphoneStatus,
+                detail: nil,
+                actions: microphoneRepairActions
+            )
+            permissionSetupSection(
+                title: "Accessibility",
+                status: accessibilityStatus,
+                detail: AccessibilityPermission.repairGuidance().detail,
+                actions: accessibilityRepairActions
+            )
         }
         .font(.system(size: 12))
         .padding(14)
@@ -303,9 +307,10 @@ private struct PreferencesView: View {
             Text("Quick Start")
                 .font(.system(size: 13, weight: .semibold))
             Text("1. Install or open Codex on this Mac, then sign in with your ChatGPT account.")
-            Text("2. Grant Microphone and Accessibility permissions.")
-            Text("3. Put your cursor in Notes or Mail, press F5, speak for five seconds, then press F5 again.")
-            Text("4. If Accessibility opens without a ChatType row, use the + button there to add the packaged ChatType.app, then return here and test again.")
+            Text("2. Press F5 once to trigger the first microphone prompt. If you denied it earlier, use Open Microphone Settings in ChatType Settings.")
+            Text("3. Use Guide Accessibility Access in ChatType Settings for the drag-to-authorize Accessibility flow when auto-paste is not ready.")
+            Text("4. Put your cursor in Notes or Mail, press F5, speak for five seconds, then press F5 again.")
+            Text("5. If Accessibility opens without a ChatType row, use the + button there to add the packaged ChatType.app, then return here and test again.")
         }
         .font(.system(size: 12))
         .padding(14)
@@ -345,6 +350,66 @@ private struct PreferencesView: View {
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
+        }
+    }
+
+    @ViewBuilder
+    private func permissionSetupSection(
+        title: String,
+        status: SetupStatus,
+        detail: String?,
+        actions: [PermissionRepairAction]
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            setupRow(title: title, status: status)
+
+            if let detail, !detail.isEmpty, status.isReady == false {
+                Text(detail)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if !actions.isEmpty {
+                HStack(spacing: 10) {
+                    ForEach(actions) { action in
+                        repairActionButton(action)
+                    }
+                }
+            }
+        }
+    }
+
+    @MainActor
+    private func performRepairAction(_ action: PermissionRepairAction) {
+        switch action.kind {
+        case .guidedAccessibilityAccess:
+            AccessibilityPermission.guideAccess()
+        case .openSettings(let destination):
+            _ = destination.open()
+        case .refreshStatus:
+            permissionRefreshNonce += 1
+        }
+    }
+
+    @ViewBuilder
+    private func repairActionButton(_ action: PermissionRepairAction) -> some View {
+        switch action.prominence {
+        case .primary:
+            Button(action.title) {
+                performRepairAction(action)
+            }
+            .buttonStyle(.borderedProminent)
+        case .secondary:
+            Button(action.title) {
+                performRepairAction(action)
+            }
+            .buttonStyle(.bordered)
+        case .utility:
+            Button(action.title) {
+                performRepairAction(action)
+            }
+            .buttonStyle(.borderless)
         }
     }
 }

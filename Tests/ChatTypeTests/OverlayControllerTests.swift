@@ -4,19 +4,20 @@ import Testing
 
 @Test
 func minimalOverlayPresetUsesNineBarVoiceGlyph() {
-    let preset = OverlayStylePreset.typeWhisperMinimal
+    let preset = OverlayStylePreset.typeWhisperIndicator
 
-    #expect(preset.pillWidth == 220)
-    #expect(preset.pillHeight == 56)
-    #expect(preset.cornerRadius == 18)
+    #expect(preset.pillHeight == 48)
+    #expect(preset.cornerRadius == 16)
     #expect(preset.waveformBarCount == 9)
     #expect(preset.showsTranscriptPreview == false)
+    #expect(preset.inlineCancelControlSize == 16)
+    #expect(preset.timerFontSize == 11)
 }
 
 @Test
 func overlayStatesStillDifferentiateLeadingVisualFamilies() {
     #expect(OverlayVisualState.recording(levels: Array(repeating: 0.2, count: 9), elapsedText: "00:03").leadingVisual == .waveform)
-    #expect(OverlayVisualState.processing.leadingVisual == .spinner)
+    #expect(OverlayVisualState.processing.leadingVisual == .waveform)
     #expect(OverlayVisualState.success(.pasted).leadingVisual == .icon(symbolName: "checkmark.circle.fill"))
     #expect(OverlayVisualState.error("Microphone permission is missing").leadingVisual == .icon(symbolName: "exclamationmark.triangle.fill"))
 }
@@ -107,11 +108,54 @@ func waveformNormalizerPadsMissingSamplesToTheRequestedWaveCount() {
 
 @Test
 func overlayRecordingWidthExpandsToFitTimer() {
-    let preset = OverlayStylePreset.typeWhisperMinimal
+    let preset = OverlayStylePreset.typeWhisperIndicator
 
     #expect(
         preset.width(for: .recording(levels: Array(repeating: 0.2, count: 9), elapsedText: "00:07")) >
             preset.width(for: .processing)
     )
     #expect(preset.width(for: .error("boom")) == preset.errorPillWidth)
+    #expect(preset.width(for: .processing) >= preset.inlineControlReservedWidth)
+}
+
+@MainActor
+@Test
+func overlayControllerUsesIntegratedSessionControlInsideMainPanel() {
+    let overlay = OverlayController()
+    let snapshot = overlay.debugSnapshot
+
+    #expect(snapshot.usesIntegratedSessionControl == true)
+    #expect(snapshot.hasDetachedClosePanel == false)
+    #expect(snapshot.panelIgnoresMouseEvents == false)
+}
+
+@MainActor
+@Test
+func overlayControllerOnlyShowsInlineCancelControlForActiveSessionStates() {
+    let overlay = OverlayController()
+
+    overlay.showRecording(elapsedText: "00:04")
+    #expect(overlay.debugSnapshot.isCancelControlVisible == true)
+    #expect(overlay.debugSnapshot.isTimerVisible == true)
+
+    overlay.showProcessing()
+    #expect(overlay.debugSnapshot.isCancelControlVisible == true)
+    #expect(overlay.debugSnapshot.isTimerVisible == false)
+
+    overlay.showResult(text: "Done", outcome: .pasted)
+    #expect(overlay.debugSnapshot.isCancelControlVisible == false)
+}
+
+@MainActor
+@Test
+func overlayControllerCancelControlRoutesClickIntoOnCancel() {
+    var cancelCallCount = 0
+    let overlay = OverlayController(onCancel: {
+        cancelCallCount += 1
+    })
+
+    overlay.showRecording(elapsedText: "00:04")
+
+    #expect(overlay.debugSimulateCancelControlClick() == true)
+    #expect(cancelCallCount == 1)
 }

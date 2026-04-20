@@ -10,15 +10,25 @@ let package = Package(
     products: [
         .executable(name: "ChatType", targets: ["ChatType"]),
     ],
+    dependencies: [
+        .package(
+            url: "https://github.com/jaywcjlove/PermissionFlow.git",
+            revision: "3c5ae16337d3448e8561e00352a01b68f92fe974"
+        ),
+    ],
     targets: [
         .executableTarget(
             name: "ChatType",
-            path: "Sources/VoiceDex"
+            dependencies: [
+                .product(name: "PermissionFlow", package: "PermissionFlow"),
+                .product(name: "SystemSettingsKit", package: "PermissionFlow"),
+            ],
+            path: "Sources/ChatType"
         ),
         .testTarget(
             name: "ChatTypeTests",
             dependencies: ["ChatType"],
-            path: "Tests/VoiceDexTests"
+            path: "Tests/ChatTypeTests"
         ),
     ],
     swiftLanguageModes: [.v6]

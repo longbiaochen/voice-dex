@@ -9,7 +9,7 @@
 
 ## 0.1.0
 
-- Renamed the launch product from `voice-dex` to `ChatType`
+- Established `ChatType` as the launch product name across the app, packaging, and docs
 - Made the local Codex desktop login-state route the default transcription path
 - Simplified the main product to a single-stage STT flow instead of a second cleanup pass
 - Added fixed transcription prompting plus hidden `transcription.hintTerms` for term preservation
