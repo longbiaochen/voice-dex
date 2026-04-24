@@ -46,6 +46,19 @@
    - treat the post as complete only after the command returns the published post URL
 11. Update docs if any onboarding, naming, packaging, or launch assumptions changed.
 
+## Public Promotion Checklist
+
+Use `docs/promotion/README.md` as the source of truth for low-cost public promotion.
+
+Before posting to public channels:
+
+1. Confirm the landing page, README, and release page describe the same default path: local Codex/ChatGPT Desktop login, `F5` recording, transcription, safe paste, and clipboard fallback.
+2. Keep the private backend dependency explicit. Do not describe the default route as a stable public API.
+3. Publish Chinese social content first, then V2EX, then Hacker News or Product Hunt only after real install feedback exists.
+4. Do not ask for upvotes on Hacker News or Product Hunt.
+5. Submit free or low-cost AI directories first; defer paid directory placement until the first week produces real signal.
+6. Keep support copy framed as optional maintenance support, not a crowdfunding campaign.
+
 ## Gatekeeper Notes
 
 `v0.1.2` is expected to be locally signed with Apple Development or Developer ID Application and is not notarized.

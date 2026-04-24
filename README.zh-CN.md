@@ -97,6 +97,10 @@ packaging/homebrew/Casks/chattype.rb
 - Releases: [github.com/longbiaochen/chat-type/releases](https://github.com/longbiaochen/chat-type/releases)
 - 当前版本页面：[v0.1.2](https://github.com/longbiaochen/chat-type/releases/tag/v0.1.2)
 
+## 支持继续维护
+
+如果 `ChatType` 确实节省了你的输入时间，可以通过 [GitHub Sponsors](https://github.com/sponsors/longbiaochen) 支持后续维护。赞助是可选的，不改变开源许可，也不改变免费 release 路径。
+
 ## TypeWhisper 术语导入
 
 `ChatType` 依然坚持默认主路径不做第二轮 AI cleanup。
@@ -183,6 +187,7 @@ scripts/post_x.sh "ChatType update"
 - [发布流程](docs/release.md)
 - [Release Notes](docs/releases/v0.1.2.md)
 - [产品 PRD](docs/chattype-v1-prd.md)
+- [推广物料包](docs/promotion/README.md)
 
 ## License
 

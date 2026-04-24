@@ -98,6 +98,10 @@ This repo does not yet publish a dedicated Homebrew tap, but the cask file is ke
 - Releases: [github.com/longbiaochen/chat-type/releases](https://github.com/longbiaochen/chat-type/releases)
 - Current release page: [v0.1.2](https://github.com/longbiaochen/chat-type/releases/tag/v0.1.2)
 
+## Support Development
+
+If `ChatType` saves you time, you can support continued maintenance through [GitHub Sponsors](https://github.com/sponsors/longbiaochen). Sponsorship is optional and does not change the open-source license or the free release path.
+
 ## TypeWhisper Terminology Import
 
 `ChatType` still avoids a second AI cleanup pass in the default product path.
@@ -184,6 +188,7 @@ That means:
 - [Release Process](docs/release.md)
 - [Release Notes](docs/releases/v0.1.2.md)
 - [Product PRD](docs/chattype-v1-prd.md)
+- [Promotion Kit](docs/promotion/README.md)
 
 ## License
 
